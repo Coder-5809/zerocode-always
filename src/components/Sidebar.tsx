@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { NavLink, useLocation } from "react-router-dom";
+import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 import { 
   Code2, 
   FileText, 
@@ -8,27 +10,33 @@ import {
   Layers, 
   Plus, 
   Search,
+  Settings,
   Terminal
 } from "lucide-react";
 
 const sidebarItems = [
-  { icon: Home, label: "Dashboard", active: true },
-  { icon: Code2, label: "Editor", active: false },
-  { icon: Folder, label: "Projects", active: false },
-  { icon: FileText, label: "Templates", active: false },
-  { icon: GitBranch, label: "Version Control", active: false },
-  { icon: Terminal, label: "Terminal", active: false },
-  { icon: Layers, label: "Deployments", active: false },
+  { icon: Home, label: "Dashboard", path: "/", active: false },
+  { icon: Code2, label: "Editor", path: "/editor", active: false },
+  { icon: Folder, label: "Projects", path: "/projects", active: false },
+  { icon: FileText, label: "Templates", path: "/templates", active: false },
+  { icon: GitBranch, label: "Version Control", path: "#", active: false },
+  { icon: Terminal, label: "Terminal", path: "#", active: false },
+  { icon: Layers, label: "Deployments", path: "#", active: false },
+  { icon: Settings, label: "Settings", path: "/settings", active: false },
 ];
 
 export function Sidebar() {
+  const location = useLocation();
+
   return (
     <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col animate-slide-in">
       <div className="p-4 border-b border-sidebar-border">
-        <Button variant="glow" className="w-full justify-start gap-2">
-          <Plus className="h-4 w-4" />
-          New Project
-        </Button>
+        <CreateProjectDialog>
+          <Button variant="glow" className="w-full justify-start gap-2">
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
+        </CreateProjectDialog>
       </div>
 
       <div className="p-4 border-b border-sidebar-border">
@@ -43,16 +51,39 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
-        {sidebarItems.map((item) => (
-          <Button
-            key={item.label}
-            variant={item.active ? "secondary" : "ghost"}
-            className="w-full justify-start gap-3 h-10"
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </Button>
-        ))}
+        {sidebarItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          const isDisabled = item.path === "#";
+          
+          if (isDisabled) {
+            return (
+              <div
+                key={item.label}
+                className="flex items-center gap-3 px-3 py-2 h-10 text-muted-foreground/50 cursor-not-allowed"
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </div>
+            );
+          }
+          
+          return (
+            <NavLink
+              key={item.label}
+              to={item.path}
+              className={({ isActive: navIsActive }) => `
+                flex items-center gap-3 px-3 py-2 h-10 rounded-lg transition-colors
+                ${navIsActive || isActive 
+                  ? 'bg-glow/20 text-glow border border-glow/30' 
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                }
+              `}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </NavLink>
+          );
+        })}
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">

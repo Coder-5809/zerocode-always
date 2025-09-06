@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 import { 
   ArrowRight, 
   Clock, 
@@ -25,11 +26,13 @@ export function WorkspaceArea() {
             Build beautiful applications without writing a single line of code
           </p>
           <div className="flex gap-4 justify-center animate-fade-in">
-            <Button variant="glow" size="lg" className="gap-2">
-              <Sparkles className="h-5 w-5" />
-              Start Building
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            <CreateProjectDialog>
+              <Button variant="glow" size="lg" className="gap-2">
+                <Sparkles className="h-5 w-5" />
+                Start Building
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </CreateProjectDialog>
             <Button variant="outline" size="lg" className="gap-2">
               <PlayCircle className="h-5 w-5" />
               Watch Demo
