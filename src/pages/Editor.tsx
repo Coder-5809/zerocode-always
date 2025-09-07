@@ -20,6 +20,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import AIPanel from "@/components/AIPanel";
 
 const fileTree = [
   {
@@ -92,7 +93,17 @@ function FileTreeItem({ item, level = 0 }: { item: any; level?: number }) {
 
 export default function Editor() {
   const [activeFile, setActiveFile] = useState("App.tsx");
-  const [prompt, setPrompt] = useState("");
+  const [generatedCode, setGeneratedCode] = useState("");
+
+  const handleCodeGenerated = (code: string) => {
+    setGeneratedCode(code);
+    // Here you would update the preview with the generated code
+  };
+
+  const handleImageGenerated = (imageUrl: string) => {
+    // Handle generated images
+    console.log('Generated image:', imageUrl);
+  };
 
   return (
     <div className="h-screen bg-background flex flex-col">
@@ -135,25 +146,15 @@ export default function Editor() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - File Explorer */}
-        <div className="w-64 border-r border-border bg-sidebar flex flex-col">
-          <div className="p-3 border-b border-sidebar-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-sidebar-foreground">Files</span>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-          
-          <div className="flex-1 overflow-auto p-2">
-            {fileTree.map((item, index) => (
-              <FileTreeItem key={index} item={item} />
-            ))}
-          </div>
+        {/* AI Panel - 25% */}
+        <div className="w-1/4 min-w-[320px]">
+          <AIPanel 
+            onCodeGenerated={handleCodeGenerated}
+            onImageGenerated={handleImageGenerated}
+          />
         </div>
 
-        {/* Main Content Area */}
+        {/* Main Content Area - 75% */}
         <div className="flex-1 flex flex-col">
           {/* Tabs */}
           <div className="h-10 border-b border-border bg-surface flex items-center px-4">
@@ -186,9 +187,8 @@ export default function Editor() {
                 Generating preview...
               </h2>
               <p className="text-muted-foreground mb-6">
-                I'll create a modern AI startup landing page with a sleek, futuristic design. This will
-                feature gradients, clean typography, and smooth animations typical of leading AI
-                companies.
+                Multi-AI system active: GPT-5 for planning, Claude Opus for coding, DALL-E 3 for images.
+                Chat with AI in the left panel to start building.
               </p>
 
               <div className="flex justify-center gap-2 mb-6">
@@ -200,40 +200,18 @@ export default function Editor() {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <div className="h-1 w-1 rounded-full bg-green-400"></div>
-                  <span>AI Event Layouts</span>
+                  <span>AI Planning Ready</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="h-1 w-1 rounded-full bg-green-400"></div>
-                  <span>Event pages</span>
+                  <span>Code Generation Ready</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-1 w-1 rounded-full bg-yellow-400 animate-pulse"></div>
-                  <span>Building/experience/info...</span>
+                  <div className="h-1 w-1 rounded-full bg-green-400"></div>
+                  <span>Image Generation Ready</span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Chat Area */}
-      <div className="border-t border-border bg-surface-elevated">
-        <div className="p-4">
-          <div className="flex items-center gap-3 max-w-4xl mx-auto">
-            <div className="flex-1 relative">
-              <MessageCircle className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Describe what you want to build..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-              />
-            </div>
-            <Button variant="glow" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              Build
-            </Button>
           </div>
         </div>
       </div>
