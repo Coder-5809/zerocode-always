@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Play, 
   Save, 
@@ -17,10 +18,14 @@ import {
   ArrowLeft,
   Code,
   MessageCircle,
-  Sparkles
+  Sparkles,
+  Monitor,
+  Bug
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AIPanel from "@/components/AIPanel";
+import CodeEditor from "@/components/CodeEditor";
+import ConsolePanel from "@/components/ConsolePanel";
 
 const fileTree = [
   {
@@ -156,63 +161,91 @@ export default function Editor() {
 
         {/* Main Content Area - 75% */}
         <div className="flex-1 flex flex-col">
-          {/* Tabs */}
-          <div className="h-10 border-b border-border bg-surface flex items-center px-4">
-            <div className="flex items-center gap-1">
-              <div className="flex items-center gap-2 px-3 py-1 bg-sidebar rounded-t text-sm text-glow border-b-2 border-glow">
-                <div className="h-2 w-2 rounded-full bg-orange-400"></div>
-                Preview
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1 text-sm text-muted-foreground hover:text-foreground cursor-pointer">
-                <File className="h-3 w-3" />
-                Code
-              </div>
+          <Tabs defaultValue="preview" className="h-full flex flex-col">
+            {/* Tabs */}
+            <div className="h-10 border-b border-border bg-surface">
+              <TabsList className="h-full rounded-none bg-transparent border-0 p-0">
+                <TabsTrigger 
+                  value="preview" 
+                  className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-glow data-[state=active]:bg-sidebar data-[state=active]:text-glow gap-2"
+                >
+                  <Monitor className="h-4 w-4" />
+                  Preview
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="code" 
+                  className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-glow data-[state=active]:bg-sidebar data-[state=active]:text-glow gap-2"
+                >
+                  <Code className="h-4 w-4" />
+                  Code
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="console" 
+                  className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-glow data-[state=active]:bg-sidebar data-[state=active]:text-glow gap-2"
+                >
+                  <Terminal className="h-4 w-4" />
+                  Console
+                </TabsTrigger>
+              </TabsList>
             </div>
-          </div>
 
-          {/* Preview Area */}
-          <div className="flex-1 flex items-center justify-center bg-surface relative">
-            <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
-            
-            <div className="relative text-center max-w-md">
-              <div className="relative mb-8">
-                <div className="h-32 w-32 rounded-full bg-gradient-primary animate-glow-pulse mx-auto flex items-center justify-center mb-6">
-                  <Sparkles className="h-16 w-16 text-primary-foreground" />
-                </div>
-                
-                <div className="absolute inset-0 rounded-full bg-gradient-glow opacity-60 blur-xl animate-glow-pulse"></div>
-              </div>
-              
-              <h2 className="text-2xl font-bold text-foreground mb-4">
-                Generating preview...
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                Multi-AI system active: GPT-5 for planning, Claude Opus for coding, DALL-E 3 for images.
-                Chat with AI in the left panel to start building.
-              </p>
+            {/* Tab Content */}
+            <div className="flex-1">
+              <TabsContent value="preview" className="h-full m-0 rounded-none">
+                {/* Preview Area */}
+                <div className="h-full flex items-center justify-center bg-surface relative">
+                  <div className="absolute inset-0 bg-gradient-glow opacity-30"></div>
+                  
+                  <div className="relative text-center max-w-md">
+                    <div className="relative mb-8">
+                      <div className="h-32 w-32 rounded-full bg-gradient-primary animate-glow-pulse mx-auto flex items-center justify-center mb-6">
+                        <Sparkles className="h-16 w-16 text-primary-foreground" />
+                      </div>
+                      
+                      <div className="absolute inset-0 rounded-full bg-gradient-glow opacity-60 blur-xl animate-glow-pulse"></div>
+                    </div>
+                    
+                    <h2 className="text-2xl font-bold text-foreground mb-4">
+                      Live Preview Ready
+                    </h2>
+                    <p className="text-muted-foreground mb-6">
+                      Multi-AI system active: GPT-5 for planning, Claude Opus for coding, DALL-E 3 for images.
+                      Chat with AI in the left panel to start building.
+                    </p>
 
-              <div className="flex justify-center gap-2 mb-6">
-                <div className="h-2 w-2 rounded-full bg-glow animate-bounce"></div>
-                <div className="h-2 w-2 rounded-full bg-glow animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="h-2 w-2 rounded-full bg-glow animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
+                    <div className="flex justify-center gap-2 mb-6">
+                      <div className="h-2 w-2 rounded-full bg-glow animate-bounce"></div>
+                      <div className="h-2 w-2 rounded-full bg-glow animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="h-2 w-2 rounded-full bg-glow animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
 
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="h-1 w-1 rounded-full bg-green-400"></div>
-                  <span>AI Planning Ready</span>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-green-400"></div>
+                        <span>AI Planning Ready</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-green-400"></div>
+                        <span>Code Generation Ready</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-green-400"></div>
+                        <span>Image Generation Ready</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-1 w-1 rounded-full bg-green-400"></div>
-                  <span>Code Generation Ready</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-1 w-1 rounded-full bg-green-400"></div>
-                  <span>Image Generation Ready</span>
-                </div>
-              </div>
+              </TabsContent>
+
+              <TabsContent value="code" className="h-full m-0 rounded-none">
+                <CodeEditor generatedCode={generatedCode} />
+              </TabsContent>
+
+              <TabsContent value="console" className="h-full m-0 rounded-none">
+                <ConsolePanel />
+              </TabsContent>
             </div>
-          </div>
+          </Tabs>
         </div>
       </div>
     </div>
