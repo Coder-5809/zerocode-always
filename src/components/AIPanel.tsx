@@ -128,14 +128,29 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
       // @ts-ignore - Puter global object
       const result = await puter.ai.chat(prompt, { model: model });
       
+      console.log('Raw Puter AI result:', result);
+      
       // Handle different response formats
       if (typeof result === 'string') {
         return result;
       }
       
-      // Extract content from object response
+      // Extract content from object response (Puter AI returns objects with content field)
       if (result && typeof result === 'object') {
-        return result.content || result.message || result.text || JSON.stringify(result);
+        // Check for the specific structure from the logs: {role, content, refusal, annotations}
+        if (result.content && typeof result.content === 'string') {
+          return result.content;
+        }
+        // Fallback to other possible fields
+        if (result.message && typeof result.message === 'string') {
+          return result.message;
+        }
+        if (result.text && typeof result.text === 'string') {
+          return result.text;
+        }
+        // If no text content found, stringify the object
+        console.warn('No text content found in AI response, stringifying:', result);
+        return JSON.stringify(result);
       }
       
       return 'No response generated';
