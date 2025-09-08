@@ -135,9 +135,13 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
         return result;
       }
       
-      // Extract content from object response (Puter AI returns objects with content field)
+      // Extract content from object response (Puter AI returns objects with nested structure)
       if (result && typeof result === 'object') {
-        // Check for the specific structure from the logs: {role, content, refusal, annotations}
+        // Check for the nested structure: {message: {content: "..."}}
+        if (result.message && result.message.content && typeof result.message.content === 'string') {
+          return result.message.content;
+        }
+        // Check for direct content field
         if (result.content && typeof result.content === 'string') {
           return result.content;
         }
