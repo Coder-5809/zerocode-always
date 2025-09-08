@@ -116,12 +116,8 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
   const callPuterAI = async (model: string, prompt: string): Promise<string> => {
     try {
       // @ts-ignore - Puter global object
-      const result = await puter.ai.chat(prompt, {
-        model: model,
-        temperature: 0.7,
-        max_tokens: 2000
-      });
-      return result.message || result.content || 'No response generated';
+      const result = await puter.ai.chat(prompt, { model: model });
+      return result.message || result.content || result || 'No response generated';
     } catch (error) {
       console.error('Puter AI error:', error);
       return `Mock ${model} response: ${prompt}`;
@@ -131,12 +127,8 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
   const generateImage = async (prompt: string): Promise<string> => {
     try {
       // @ts-ignore - Puter global object
-      const result = await puter.ai.generateImage(prompt, {
-        model: 'dall-e-3',
-        size: '1024x1024',
-        quality: 'standard'
-      });
-      return result.url || '/placeholder.svg';
+      const imageElement = await puter.ai.txt2img(prompt);
+      return imageElement.src || '/placeholder.svg';
     } catch (error) {
       console.error('Image generation error:', error);
       return '/placeholder.svg';
