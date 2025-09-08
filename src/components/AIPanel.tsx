@@ -124,7 +124,7 @@ Generate a full React component with:
 - All necessary imports
 - Proper component structure`;
 
-        const codingResponse = await callPuterAI('claude-opus-4-20250514', codingPrompt);
+        const codingResponse = await callPuterAI('claude-sonnet-4-20250514', codingPrompt);
         console.log('Coding AI raw response:', codingResponse);
         
         response = String(codingResponse);
@@ -140,7 +140,7 @@ Generate a full React component with:
         response = String(rawResponse);
       } else if (aiType === 'coding') {
         // Use Claude Opus 4.1 for coding
-        const rawResponse = await callPuterAI('claude-opus-4-20250514', originalInput);
+        const rawResponse = await callPuterAI('claude-sonnet-4-20250514', originalInput);
         console.log('Coding AI raw response:', rawResponse);
         response = String(rawResponse);
         onCodeGenerated?.(response);
@@ -240,7 +240,7 @@ Generate a full React component with:
   const getAIBadgeText = (aiType?: string) => {
     switch (aiType) {
       case 'planning': return 'GPT-5';
-      case 'coding': return 'Claude Opus';
+      case 'coding': return 'Claude Sonnet';
       case 'image': return 'DALL-E 3';
       default: return 'AI';
     }
