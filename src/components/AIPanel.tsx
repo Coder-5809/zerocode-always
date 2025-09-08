@@ -17,7 +17,7 @@ import {
 interface Message {
   id: string;
   type: 'user' | 'ai';
-  content: string;
+  content: string; // Enforce string type
   aiType?: 'planning' | 'coding' | 'image';
   timestamp: Date;
 }
@@ -75,15 +75,25 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
       
       if (aiType === 'planning') {
         // Use ChatGPT-5 for planning
-        response = await callPuterAI('gpt-5-2025-08-07', input);
+        const rawResponse = await callPuterAI('gpt-5-2025-08-07', input);
+        console.log('Planning AI raw response:', rawResponse);
+        response = String(rawResponse);
       } else if (aiType === 'coding') {
         // Use Claude Opus 4.1 for coding
-        response = await callPuterAI('claude-opus-4-20250514', input);
+        const rawResponse = await callPuterAI('claude-opus-4-20250514', input);
+        console.log('Coding AI raw response:', rawResponse);
+        response = String(rawResponse);
       } else if (aiType === 'image') {
         // Use DALL-E 3 for images
         const imageUrl = await generateImage(input);
         response = `Generated image: ${imageUrl}`;
         onImageGenerated?.(imageUrl);
+      }
+
+      // Ensure response is always a string
+      if (typeof response === 'object') {
+        console.error('Response is still an object:', response);
+        response = JSON.stringify(response);
       }
 
       const aiMessage: Message = {
@@ -217,7 +227,7 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
                       ? 'bg-primary text-primary-foreground ml-auto'
                       : 'bg-surface border border-border text-foreground'
                   }`}>
-                    {message.content}
+                    {typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}
                   </div>
                 </div>
               </div>
