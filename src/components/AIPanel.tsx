@@ -58,36 +58,92 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const originalInput = input;
     setInput("");
     setIsLoading(true);
 
     try {
+      // Determine if this is a website/project prompt
+      const isWebsitePrompt = originalInput.toLowerCase().includes('website') || 
+                             originalInput.toLowerCase().includes('landing page') ||
+                             originalInput.toLowerCase().includes('app') ||
+                             originalInput.toLowerCase().includes('build') ||
+                             originalInput.toLowerCase().includes('create') ||
+                             originalInput.toLowerCase().includes('design');
+
       // Determine AI type based on message content
       let aiType: 'planning' | 'coding' | 'image' = 'planning';
-      if (input.toLowerCase().includes('code') || input.toLowerCase().includes('implement')) {
-        aiType = 'coding';
-      } else if (input.toLowerCase().includes('image') || input.toLowerCase().includes('picture')) {
+      if (originalInput.toLowerCase().includes('image') || originalInput.toLowerCase().includes('picture')) {
         aiType = 'image';
+      } else if (originalInput.toLowerCase().includes('code') || originalInput.toLowerCase().includes('implement')) {
+        aiType = 'coding';
       }
 
       // Use Puter AI services
       let response = '';
       
-      if (aiType === 'planning') {
+      if (aiType === 'image') {
+        // Use DALL-E 3 for images
+        const imageUrl = await generateImage(originalInput);
+        response = `Generated image: ${imageUrl}`;
+        onImageGenerated?.(imageUrl);
+      } else if (isWebsitePrompt) {
+        // Two-stage process: Planning with GPT-5, then Coding with Claude
+        
+        // Stage 1: Planning with GPT-5
+        const planningPrompt = `Create a detailed plan for: ${originalInput}. Include:
+1. Project structure and components needed
+2. Key features and functionality
+3. Design considerations
+4. Technical requirements
+5. Step-by-step implementation approach`;
+        
+        const planningResponse = await callPuterAI('gpt-5-2025-08-07', planningPrompt);
+        console.log('Planning AI raw response:', planningResponse);
+        
+        const planningMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: String(planningResponse),
+          aiType: 'planning',
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, planningMessage]);
+
+        // Stage 2: Coding with Claude Opus 4
+        const codingPrompt = `Based on this plan, generate the complete React/TypeScript code:
+
+PLAN:
+${planningResponse}
+
+Generate a full React component with:
+- Modern, responsive design using Tailwind CSS
+- TypeScript interfaces
+- Clean, production-ready code
+- All necessary imports
+- Proper component structure`;
+
+        const codingResponse = await callPuterAI('claude-opus-4-20250514', codingPrompt);
+        console.log('Coding AI raw response:', codingResponse);
+        
+        response = String(codingResponse);
+        aiType = 'coding';
+        
+        // Update code tab
+        onCodeGenerated?.(response);
+        
+      } else if (aiType === 'planning') {
         // Use ChatGPT-5 for planning
-        const rawResponse = await callPuterAI('gpt-5-2025-08-07', input);
+        const rawResponse = await callPuterAI('gpt-5-2025-08-07', originalInput);
         console.log('Planning AI raw response:', rawResponse);
         response = String(rawResponse);
       } else if (aiType === 'coding') {
         // Use Claude Opus 4.1 for coding
-        const rawResponse = await callPuterAI('claude-opus-4-20250514', input);
+        const rawResponse = await callPuterAI('claude-opus-4-20250514', originalInput);
         console.log('Coding AI raw response:', rawResponse);
         response = String(rawResponse);
-      } else if (aiType === 'image') {
-        // Use DALL-E 3 for images
-        const imageUrl = await generateImage(input);
-        response = `Generated image: ${imageUrl}`;
-        onImageGenerated?.(imageUrl);
+        onCodeGenerated?.(response);
       }
 
       // Ensure response is always a string
@@ -97,7 +153,7 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
       }
 
       const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: (Date.now() + Math.random()).toString(),
         type: 'ai',
         content: response,
         aiType,
@@ -106,9 +162,6 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
 
       setMessages(prev => [...prev, aiMessage]);
 
-      if (aiType === 'coding') {
-        onCodeGenerated?.(response);
-      }
     } catch (error) {
       console.error('AI request failed:', error);
       const errorMessage: Message = {
