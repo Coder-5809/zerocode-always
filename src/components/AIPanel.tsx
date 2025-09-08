@@ -117,10 +117,21 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
     try {
       // @ts-ignore - Puter global object
       const result = await puter.ai.chat(prompt, { model: model });
-      return result.message || result.content || result || 'No response generated';
+      
+      // Handle different response formats
+      if (typeof result === 'string') {
+        return result;
+      }
+      
+      // Extract content from object response
+      if (result && typeof result === 'object') {
+        return result.content || result.message || result.text || JSON.stringify(result);
+      }
+      
+      return 'No response generated';
     } catch (error) {
       console.error('Puter AI error:', error);
-      return `Mock ${model} response: ${prompt}`;
+      return `Error: ${error.message || 'Failed to get AI response'}`;
     }
   };
 
