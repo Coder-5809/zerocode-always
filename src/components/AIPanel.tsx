@@ -98,18 +98,20 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
 4. Technical requirements
 5. Step-by-step implementation approach`;
         
-        const planningResponse = await callPuterAI('gpt-5-2025-08-07', planningPrompt);
-        console.log('Planning AI raw response:', planningResponse);
-        
-        const planningMessage: Message = {
+        // Show thinking message instead of full planning response
+        const thinkingMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'ai',
-          content: String(planningResponse),
+          content: "Thinking through the project structure and requirements...",
           aiType: 'planning',
           timestamp: new Date()
         };
 
-        setMessages(prev => [...prev, planningMessage]);
+        setMessages(prev => [...prev, thinkingMessage]);
+
+        // Get planning response but don't display it
+        const planningResponse = await callPuterAI('gpt-5-2025-08-07', planningPrompt);
+        console.log('Planning AI raw response:', planningResponse);
 
         // Stage 2: Coding with Claude Opus 4
         const codingPrompt = `Based on this plan, generate the complete React/TypeScript code:
@@ -190,14 +192,24 @@ Generate a full React component with:
       
       // Extract content from object response (Puter AI returns objects with nested structure)
       if (result && typeof result === 'object') {
+        // Handle Claude Sonnet 4 specific structure
+        if (result.message && result.message.content && Array.isArray(result.message.content)) {
+          const textContent = result.message.content.find(item => item.type === 'text');
+          if (textContent && textContent.text) {
+            return textContent.text;
+          }
+        }
+        
         // Check for the nested structure: {message: {content: "..."}}
         if (result.message && result.message.content && typeof result.message.content === 'string') {
           return result.message.content;
         }
+        
         // Check for direct content field
         if (result.content && typeof result.content === 'string') {
           return result.content;
         }
+        
         // Fallback to other possible fields
         if (result.message && typeof result.message === 'string') {
           return result.message;
@@ -205,6 +217,7 @@ Generate a full React component with:
         if (result.text && typeof result.text === 'string') {
           return result.text;
         }
+        
         // If no text content found, stringify the object
         console.warn('No text content found in AI response, stringifying:', result);
         return JSON.stringify(result);
