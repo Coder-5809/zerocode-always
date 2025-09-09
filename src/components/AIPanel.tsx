@@ -99,20 +99,20 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
 
         setMessages(prev => [...prev, thinkingMessage]);
 
-        const planningResponse = await callGitHubAI("openai/gpt-4.1", planningPrompt);
+        const planningResponse = await callGitHubAI("openai/gpt-5", planningPrompt);
 
         const codingPrompt = `Based on this plan, generate the complete React/TypeScript code:\nPLAN:\n${planningResponse}`;
 
-        const codingResponse = await callGitHubAI("anthropic/claude-sonnet-4", codingPrompt);
+        const codingResponse = await callGitHubAI("cohere/cohere-command-a", codingPrompt);
 
         response = String(codingResponse);
         aiType = "coding";
         onCodeGenerated?.(response);
       } else if (aiType === "planning") {
-        const rawResponse = await callGitHubAI("openai/gpt-4.1", originalInput);
+        const rawResponse = await callGitHubAI("openai/gpt-5", originalInput);
         response = String(rawResponse);
       } else if (aiType === "coding") {
-        const rawResponse = await callGitHubAI("anthropic/claude-sonnet-4", originalInput);
+        const rawResponse = await callGitHubAI("cohere/cohere-command-a", originalInput);
         response = String(rawResponse);
         onCodeGenerated?.(response);
       }
