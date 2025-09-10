@@ -22,12 +22,13 @@ interface Message {
 
 interface AIPanelProps {
   onCodeGenerated?: (code: string) => void;
+  onImageGenerated?: (imageUrl: string) => void;
 }
 
 const OPENROUTER_API_BASE = "https://openrouter.ai/api/v1";
 const OPENROUTER_TOKEN = "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";
 
-export default function AIPanel({ onCodeGenerated }: AIPanelProps) {
+export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
