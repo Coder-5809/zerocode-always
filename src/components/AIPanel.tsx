@@ -220,7 +220,7 @@ Always aim to create production-ready code that follows industry standards.`;
       <Bot className="h-3 w-3" />
     );
 
-  const getAIBadgeText = (aiType?: string) => "Nemotron-9B";
+  const getAIBadgeText = (aiType?: string) => "Gemini-2.0-Flash";
 
   return (
     <div className="h-full bg-sidebar border-r border-sidebar-border flex flex-col">
