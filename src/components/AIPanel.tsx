@@ -106,6 +106,34 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
 
   const callOpenRouterAI = async (model: string, prompt: string): Promise<string> => {
     try {
+      // Build conversation history from messages
+      const conversationHistory = messages.map(msg => ({
+        role: msg.type === "user" ? "user" : "assistant",
+        content: msg.content
+      }));
+
+      const systemPrompt = `You are an expert React TypeScript developer with deep knowledge of shadcn/ui, Tailwind CSS, and modern web development best practices.
+
+Key Guidelines:
+- Always use React with TypeScript
+- Use shadcn/ui components when possible
+- Use Tailwind CSS for styling with semantic design tokens
+- Write clean, maintainable, and well-documented code
+- Follow React best practices and hooks patterns
+- Use proper TypeScript types and interfaces
+- Create responsive designs
+- Focus on accessibility and performance
+
+When generating code:
+- Provide complete, working examples
+- Include proper imports and dependencies
+- Use semantic HTML elements
+- Follow consistent naming conventions
+- Add appropriate error handling
+- Include helpful comments for complex logic
+
+Always aim to create production-ready code that follows industry standards.`;
+
       const res = await fetch(`${OPENROUTER_API_BASE}/chat/completions`, {
         method: "POST",
         headers: {
@@ -115,9 +143,12 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: "You are an AI assistant." },
+            { role: "system", content: systemPrompt },
+            ...conversationHistory,
             { role: "user", content: prompt }
-          ]
+          ],
+          temperature: 0.7,
+          max_tokens: 2000
         })
       });
 
