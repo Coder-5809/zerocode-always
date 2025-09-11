@@ -104,6 +104,14 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
     }
   };
 
+  const processFileCommands = (response: string): string => {
+    // Replace file operation commands with readable descriptions
+    return response
+      .replace(/<zerocode-read-([^>]+)>/g, '📖 Reading $1')
+      .replace(/<zerocode-write-([^>]+)>/g, '✏️ Writing $1')
+      .replace(/<zerocode-edit-([^>]+)>/g, '📝 Editing $1');
+  };
+
   const callOpenRouterAI = async (model: string, prompt: string): Promise<string> => {
     try {
       // Build conversation history from messages
@@ -132,6 +140,14 @@ When generating code:
 - Add appropriate error handling
 - Include helpful comments for complex logic
 
+File Operations Commands:
+You have access to these special commands for file operations:
+- <zerocode-read-filename.tsx> - Use this to read any file in the project
+- <zerocode-write-filename.tsx> - Use this to write/create new files
+- <zerocode-edit-filename.tsx> - Use this to edit existing files
+
+When you need to work with files, use these commands and I'll handle the actual file operations.
+
 Always aim to create production-ready code that follows industry standards.`;
 
       const res = await fetch(`${OPENROUTER_API_BASE}/chat/completions`, {
@@ -153,7 +169,12 @@ Always aim to create production-ready code that follows industry standards.`;
       });
 
       const data = await res.json();
-      return data?.choices?.[0]?.message?.content || JSON.stringify(data);
+      let response = data?.choices?.[0]?.message?.content || JSON.stringify(data);
+      
+      // Process file operation commands
+      response = processFileCommands(response);
+      
+      return response;
     } catch (error) {
       return `Error: ${error.message || "Failed to get AI response"}`;
     }
