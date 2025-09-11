@@ -33,7 +33,7 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
     {
       id: "1",
       type: "ai",
-      content: "I'll create a modern AI startup landing page with a sleek, futuristic design.",
+      content: "What do you want to design.",
       aiType: "planning",
       timestamp: new Date()
     }
@@ -151,7 +151,7 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
         content: msg.content
       }));
 
-      const systemPrompt = `You are an expert React TypeScript developer with deep knowledge of shadcn/ui, Tailwind CSS, and modern web development best practices.
+      const systemPrompt = `You are Chat GPT 5 , an expert React TypeScript developer with deep knowledge of shadcn/ui, Tailwind CSS, and modern web development best practices.
 
 Key Guidelines:
 - Always use React with TypeScript
@@ -220,7 +220,7 @@ Always aim to create production-ready code that follows industry standards.`;
       <Bot className="h-3 w-3" />
     );
 
-  const getAIBadgeText = (aiType?: string) => "Gemini-2.0-Flash";
+  const getAIBadgeText = (aiType?: string) => "GPT - 5";
 
   return (
     <div className="h-full bg-sidebar border-r border-sidebar-border flex flex-col">
