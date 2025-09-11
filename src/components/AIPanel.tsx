@@ -73,7 +73,7 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
         aiType = "coding";
       }
 
-      const response = await callOpenRouterAI("nvidia/nemotron-nano-9b-v2:free", originalInput);
+      const response = await callOpenRouterAI("google/gemini-2.0-flash-exp:free", originalInput);
 
       if (aiType === "coding") {
         onCodeGenerated?.(response);
