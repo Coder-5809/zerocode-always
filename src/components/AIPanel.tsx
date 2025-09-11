@@ -104,12 +104,43 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
     }
   };
 
-  const processFileCommands = (response: string): string => {
-    // Replace file operation commands with readable descriptions
-    return response
-      .replace(/<zerocode-read-([^>]+)>/g, '📖 Reading $1')
-      .replace(/<zerocode-write-([^>]+)>/g, '✏️ Writing $1')
-      .replace(/<zerocode-edit-([^>]+)>/g, '📝 Editing $1');
+  const processFileCommands = async (response: string): Promise<string> => {
+    let processedResponse = response;
+    
+    // Process read commands
+    const readMatches = response.match(/<zerocode-read-([^>]+)>/g);
+    if (readMatches) {
+      for (const match of readMatches) {
+        const filename = match.replace(/<zerocode-read-([^>]+)>/, '$1');
+        try {
+          // In a real implementation, you would call lov-view here
+          // For now, we'll just show a reading message
+          processedResponse = processedResponse.replace(match, `📖 Reading ${filename}`);
+        } catch (error) {
+          processedResponse = processedResponse.replace(match, `❌ Error reading ${filename}`);
+        }
+      }
+    }
+    
+    // Process write commands  
+    const writeMatches = response.match(/<zerocode-write-([^>]+)>/g);
+    if (writeMatches) {
+      for (const match of writeMatches) {
+        const filename = match.replace(/<zerocode-write-([^>]+)>/, '$1');
+        processedResponse = processedResponse.replace(match, `✏️ Writing ${filename}`);
+      }
+    }
+    
+    // Process edit commands
+    const editMatches = response.match(/<zerocode-edit-([^>]+)>/g);
+    if (editMatches) {
+      for (const match of editMatches) {
+        const filename = match.replace(/<zerocode-edit-([^>]+)>/, '$1');
+        processedResponse = processedResponse.replace(match, `📝 Editing ${filename}`);
+      }
+    }
+    
+    return processedResponse;
   };
 
   const callOpenRouterAI = async (model: string, prompt: string): Promise<string> => {
@@ -172,7 +203,7 @@ Always aim to create production-ready code that follows industry standards.`;
       let response = data?.choices?.[0]?.message?.content || JSON.stringify(data);
       
       // Process file operation commands
-      response = processFileCommands(response);
+      response = await processFileCommands(response);
       
       return response;
     } catch (error) {
