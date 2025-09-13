@@ -11,11 +11,6 @@ import {
   Bot,
   User
 } from "lucide-react";
-import Bytez from "bytez.js";
-
-const sdk = new Bytez("34a591d47d60776c873fa6802db6c9df");
-const gptModel = sdk.model("openai/gpt-4.5-preview");
-const claudeModel = sdk.model("anthropic/claude-3-opus");
 
 interface Message {
   id: string;
@@ -27,9 +22,13 @@ interface Message {
 
 interface AIPanelProps {
   onCodeGenerated?: (code: string) => void;
+  onImageGenerated?: (imageUrl: string) => void;
 }
 
-export default function AIPanel({ onCodeGenerated }: AIPanelProps) {
+const OPENROUTER_API_BASE = "https://openrouter.ai/api/v1";
+const OPENROUTER_TOKEN = "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";
+
+export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -74,45 +73,9 @@ export default function AIPanel({ onCodeGenerated }: AIPanelProps) {
         aiType = "coding";
       }
 
-      let response = "";
+      const response = await callOpenRouterAI("google/gemini-2.0-flash-exp:free", originalInput);
 
-      if (aiType === "planning") {
-        // Step 1: Generate a project plan with GPT
-        const { output: planningResponse } = await gptModel.run([
-          { role: "system", content: `You are a strategic project planner for web applications.\n\nYour role:\n- Break down vague ideas into clear, actionable project plans.\n- Define technical requirements and architecture at a high level.\n- Suggest appropriate technologies, libraries, and frameworks.\n- Provide a phased roadmap with milestones.\n- Ensure accessibility, scalability, and performance are considered.\n- Communicate in a clear, structured, and concise way.\n\nDo not generate code. Focus only on detailed planning and strategy.` },
-          { role: "user", content: originalInput }
-        ]);
-
-        // Step 2: Summarize the plan for user display
-        const planSummary = typeof planningResponse === "string" && planningResponse.length > 200
-          ? planningResponse.slice(0, 200) + "..."
-          : planningResponse;
-
-        const summaryMessage: Message = {
-          id: (Date.now() + Math.random()).toString(),
-          type: "ai",
-          content: `Project Plan Summary: ${planSummary}`,
-          aiType: "planning",
-          timestamp: new Date()
-        };
-
-        setMessages(prev => [...prev, summaryMessage]);
-
-        // Step 3: Pass full plan to Claude for coding
-        const { output: codingResponse } = await claudeModel.run([
-          { role: "system", content: `You are an expert React TypeScript developer with deep knowledge of shadcn/ui, Tailwind CSS, and modern web development best practices.\n\nKey Guidelines:\n- Always use React with TypeScript\n- Use shadcn/ui components when possible\n- Use Tailwind CSS for styling with semantic design tokens\n- Write clean, maintainable, and well-documented code\n- Follow React best practices and hooks patterns\n- Use proper TypeScript types and interfaces\n- Create responsive designs\n- Focus on accessibility and performance\n\nWhen generating code:\n- Provide complete, working examples\n- Include proper imports and dependencies\n- Use semantic HTML elements\n- Follow consistent naming conventions\n- Add appropriate error handling\n- Include helpful comments for complex logic\n\nAlways aim to create production-ready code that follows industry standards.` },
-          { role: "user", content: `Based on this project plan, generate the complete code:\n\n${planningResponse}` }
-        ]);
-
-        response = String(codingResponse);
-        aiType = "coding";
-        onCodeGenerated?.(response);
-      } else if (aiType === "coding") {
-        const { output } = await claudeModel.run([
-          { role: "system", content: `You are an expert React TypeScript developer with deep knowledge of shadcn/ui, Tailwind CSS, and modern web development best practices.\n\nKey Guidelines:\n- Always use React with TypeScript\n- Use shadcn/ui components when possible\n- Use Tailwind CSS for styling with semantic design tokens\n- Write clean, maintainable, and well-documented code\n- Follow React best practices and hooks patterns\n- Use proper TypeScript types and interfaces\n- Create responsive designs\n- Focus on accessibility and performance\n\nWhen generating code:\n- Provide complete, working examples\n- Include proper imports and dependencies\n- Use semantic HTML elements\n- Follow consistent naming conventions\n- Add appropriate error handling\n- Include helpful comments for complex logic\n\nAlways aim to create production-ready code that follows industry standards.` },
-          { role: "user", content: originalInput }
-        ]);
-        response = String(output);
+      if (aiType === "coding") {
         onCodeGenerated?.(response);
       }
 
@@ -141,6 +104,113 @@ export default function AIPanel({ onCodeGenerated }: AIPanelProps) {
     }
   };
 
+  const processFileCommands = async (response: string): Promise<string> => {
+    let processedResponse = response;
+    
+    // Process read commands
+    const readMatches = response.match(/<zerocode-read-([^>]+)>/g);
+    if (readMatches) {
+      for (const match of readMatches) {
+        const filename = match.replace(/<zerocode-read-([^>]+)>/, '$1');
+        try {
+          // In a real implementation, you would call lov-view here
+          // For now, we'll just show a reading message
+          processedResponse = processedResponse.replace(match, `📖 Reading ${filename}`);
+        } catch (error) {
+          processedResponse = processedResponse.replace(match, `❌ Error reading ${filename}`);
+        }
+      }
+    }
+    
+    // Process write commands  
+    const writeMatches = response.match(/<zerocode-write-([^>]+)>/g);
+    if (writeMatches) {
+      for (const match of writeMatches) {
+        const filename = match.replace(/<zerocode-write-([^>]+)>/, '$1');
+        processedResponse = processedResponse.replace(match, `✏️ Writing ${filename}`);
+      }
+    }
+    
+    // Process edit commands
+    const editMatches = response.match(/<zerocode-edit-([^>]+)>/g);
+    if (editMatches) {
+      for (const match of editMatches) {
+        const filename = match.replace(/<zerocode-edit-([^>]+)>/, '$1');
+        processedResponse = processedResponse.replace(match, `📝 Editing ${filename}`);
+      }
+    }
+    
+    return processedResponse;
+  };
+
+  const callOpenRouterAI = async (model: string, prompt: string): Promise<string> => {
+    try {
+      // Build conversation history from messages
+      const conversationHistory = messages.map(msg => ({
+        role: msg.type === "user" ? "user" : "assistant",
+        content: msg.content
+      }));
+
+      const systemPrompt = `You are Chat GPT 5 , an expert React TypeScript developer with deep knowledge of shadcn/ui, Tailwind CSS, and modern web development best practices.
+
+Key Guidelines:
+- Always use React with TypeScript
+- Use shadcn/ui components when possible
+- Use Tailwind CSS for styling with semantic design tokens
+- Write clean, maintainable, and well-documented code
+- Follow React best practices and hooks patterns
+- Use proper TypeScript types and interfaces
+- Create responsive designs
+- Focus on accessibility and performance
+
+When generating code:
+- Provide complete, working examples
+- Include proper imports and dependencies
+- Use semantic HTML elements
+- Follow consistent naming conventions
+- Add appropriate error handling
+- Include helpful comments for complex logic
+
+File Operations Commands:
+You have access to these special commands for file operations:
+- <zerocode-read-filename.tsx> - Use this to read any file in the project
+- <zerocode-write-filename.tsx> - Use this to write/create new files
+- <zerocode-edit-filename.tsx> - Use this to edit existing files
+
+When you need to work with files, use these commands and I'll handle the actual file operations.
+
+Always aim to create production-ready code that follows industry standards.`;
+
+      const res = await fetch(`${OPENROUTER_API_BASE}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...conversationHistory,
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+
+      const data = await res.json();
+      let response = data?.choices?.[0]?.message?.content || JSON.stringify(data);
+      
+      // Process file operation commands
+      response = await processFileCommands(response);
+      
+      return response;
+    } catch (error) {
+      return `Error: ${error.message || "Failed to get AI response"}`;
+    }
+  };
+
   const getAIIcon = (aiType?: string) =>
     aiType === "planning" ? (
       <Lightbulb className="h-3 w-3" />
@@ -150,8 +220,7 @@ export default function AIPanel({ onCodeGenerated }: AIPanelProps) {
       <Bot className="h-3 w-3" />
     );
 
-  const getAIBadgeText = (aiType?: string) =>
-    aiType === "planning" ? "GPT-4.5" : aiType === "coding" ? "Claude-3 Opus" : "AI";
+  const getAIBadgeText = (aiType?: string) => "GPT - 5";
 
   return (
     <div className="h-full bg-sidebar border-r border-sidebar-border flex flex-col">

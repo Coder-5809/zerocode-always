@@ -155,6 +155,7 @@ export default function Editor() {
         <div className="w-1/4 min-w-[320px]">
           <AIPanel 
             onCodeGenerated={handleCodeGenerated}
+            onImageGenerated={handleImageGenerated}
           />
         </div>
 
