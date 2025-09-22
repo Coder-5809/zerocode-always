@@ -25,15 +25,45 @@ interface AIPanelProps {
   onImageGenerated?: (imageUrl: string) => void;
 }
 
-const OPENROUTER_API_BASE = "https://openrouter.ai/api/v1";
-const OPENROUTER_TOKEN = "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";
+const SAMURAI_API_BASE = "https://samuraiapi.in/v1";
+const SAMURAI_API_KEY = "sk-X6x1NBcQx3UxqWZDHEP271SPdrI0gevtNTEIvGDWRAaubwz2"; // replace with your key
 
-export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelProps) {
+// --- System Prompts ---
+const planningSystemPrompt = `
+You are GPT-5, a master *planner*.
+Your job: break user requests into structured, actionable plans.
+- Think step by step.
+- Focus on clarity and feasibility.
+- Do NOT write code — only explain what should be built and how.
+- Your output should be a clean, numbered plan developers can follow.
+`;
+
+const codingSystemPrompt = `
+You are Claude Sonnet 4, an expert software engineer.
+Your role is to take the plan from GPT-5 and write complete, production-ready code.
+
+Guidelines:
+- Always use React with TypeScript.
+- Prefer shadcn/ui components and TailwindCSS for styling.
+- Ensure accessibility, responsiveness, and maintainability.
+- Provide full code blocks, not snippets, so the code can run directly.
+- Add helpful comments for non-trivial logic.
+
+Special File Commands:
+You can use these commands to interact with the codebase:
+- <zerocode-read-filename.tsx> → read a file
+- <zerocode-write-filename.tsx> → create/write a new file
+- <zerocode-edit-filename.tsx> → edit an existing file
+
+When you need to modify files, use these tags instead of describing changes in plain text.
+`;
+
+export default function AIPanel({ onCodeGenerated }: AIPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       type: "ai",
-      content: "What do you want to design.",
+      content: "What do you want to design?",
       aiType: "planning",
       timestamp: new Date()
     }
@@ -64,30 +94,32 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
     setIsLoading(true);
 
     try {
-      let aiType: "planning" | "coding" = "planning";
-      if (
-        originalInput.toLowerCase().includes("code") ||
-        originalInput.toLowerCase().includes("implement") ||
-        originalInput.toLowerCase().includes("build")
-      ) {
-        aiType = "coding";
-      }
+      // Step 1 → Planning with GPT-5
+      const plan = await callSamuraiAI("gpt-4.1", originalInput);
 
-      const response = await callOpenRouterAI("google/gemini-2.0-flash-exp:free", originalInput);
-
-      if (aiType === "coding") {
-        onCodeGenerated?.(response);
-      }
-
-      const aiMessage: Message = {
+      const planningMessage: Message = {
         id: (Date.now() + Math.random()).toString(),
         type: "ai",
-        content: response,
-        aiType,
+        content: plan,
+        aiType: "planning",
         timestamp: new Date()
       };
+      setMessages(prev => [...prev, planningMessage]);
 
-      setMessages(prev => [...prev, aiMessage]);
+      // Step 2 → Send plan to Claude Sonnet 4 for coding
+      const code = await callSamuraiAI("Free/Samurai/claude-sonnet-4", plan);
+
+      if (onCodeGenerated) onCodeGenerated(code);
+
+      const codingMessage: Message = {
+        id: (Date.now() + Math.random()).toString(),
+        type: "ai",
+        content: code,
+        aiType: "coding",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, codingMessage]);
+
     } catch (error) {
       console.error("AI request failed:", error);
       setMessages(prev => [
@@ -95,7 +127,7 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
         {
           id: (Date.now() + 1).toString(),
           type: "ai",
-          content: "Sorry, I encountered an error.",
+          content: "❌ Error while generating plan/code.",
           timestamp: new Date()
         }
       ]);
@@ -106,22 +138,16 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
 
   const processFileCommands = async (response: string): Promise<string> => {
     let processedResponse = response;
-    
+
     // Process read commands
     const readMatches = response.match(/<zerocode-read-([^>]+)>/g);
     if (readMatches) {
       for (const match of readMatches) {
         const filename = match.replace(/<zerocode-read-([^>]+)>/, '$1');
-        try {
-          // In a real implementation, you would call lov-view here
-          // For now, we'll just show a reading message
-          processedResponse = processedResponse.replace(match, `📖 Reading ${filename}`);
-        } catch (error) {
-          processedResponse = processedResponse.replace(match, `❌ Error reading ${filename}`);
-        }
+        processedResponse = processedResponse.replace(match, `📖 Reading ${filename}`);
       }
     }
-    
+
     // Process write commands  
     const writeMatches = response.match(/<zerocode-write-([^>]+)>/g);
     if (writeMatches) {
@@ -130,7 +156,7 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
         processedResponse = processedResponse.replace(match, `✏️ Writing ${filename}`);
       }
     }
-    
+
     // Process edit commands
     const editMatches = response.match(/<zerocode-edit-([^>]+)>/g);
     if (editMatches) {
@@ -139,72 +165,39 @@ export default function AIPanel({ onCodeGenerated, onImageGenerated }: AIPanelPr
         processedResponse = processedResponse.replace(match, `📝 Editing ${filename}`);
       }
     }
-    
+
     return processedResponse;
   };
 
-  const callOpenRouterAI = async (model: string, prompt: string): Promise<string> => {
+  const callSamuraiAI = async (model: string, prompt: string): Promise<string> => {
     try {
-      // Build conversation history from messages
-      const conversationHistory = messages.map(msg => ({
-        role: msg.type === "user" ? "user" : "assistant",
-        content: msg.content
-      }));
+      let systemPrompt = "";
+      if (model === "gpt-5") systemPrompt = planningSystemPrompt;
+      else if (model.includes("claude")) systemPrompt = codingSystemPrompt;
 
-      const systemPrompt = `You are Chat GPT 5 , an expert React TypeScript developer with deep knowledge of shadcn/ui, Tailwind CSS, and modern web development best practices.
-
-Key Guidelines:
-- Always use React with TypeScript
-- Use shadcn/ui components when possible
-- Use Tailwind CSS for styling with semantic design tokens
-- Write clean, maintainable, and well-documented code
-- Follow React best practices and hooks patterns
-- Use proper TypeScript types and interfaces
-- Create responsive designs
-- Focus on accessibility and performance
-
-When generating code:
-- Provide complete, working examples
-- Include proper imports and dependencies
-- Use semantic HTML elements
-- Follow consistent naming conventions
-- Add appropriate error handling
-- Include helpful comments for complex logic
-
-File Operations Commands:
-You have access to these special commands for file operations:
-- <zerocode-read-filename.tsx> - Use this to read any file in the project
-- <zerocode-write-filename.tsx> - Use this to write/create new files
-- <zerocode-edit-filename.tsx> - Use this to edit existing files
-
-When you need to work with files, use these commands and I'll handle the actual file operations.
-
-Always aim to create production-ready code that follows industry standards.`;
-
-      const res = await fetch(`${OPENROUTER_API_BASE}/chat/completions`, {
+      const res = await fetch(`${SAMURAI_API_BASE}/chat/completions`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${OPENROUTER_TOKEN}`,
+          Authorization: `Bearer ${SAMURAI_API_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
           model,
           messages: [
             { role: "system", content: systemPrompt },
-            ...conversationHistory,
             { role: "user", content: prompt }
           ],
           temperature: 0.7,
-          max_tokens: 2000
+          max_tokens: 3000
         })
       });
 
       const data = await res.json();
       let response = data?.choices?.[0]?.message?.content || JSON.stringify(data);
-      
-      // Process file operation commands
+
+      // Let Claude’s file commands be processed
       response = await processFileCommands(response);
-      
+
       return response;
     } catch (error) {
       return `Error: ${error.message || "Failed to get AI response"}`;
@@ -220,7 +213,11 @@ Always aim to create production-ready code that follows industry standards.`;
       <Bot className="h-3 w-3" />
     );
 
-  const getAIBadgeText = (aiType?: string) => "GPT - 5";
+  const getAIBadgeText = (aiType?: string) => {
+    if (aiType === "planning") return "Planning";
+    if (aiType === "coding") return "Coding";
+    return "AI";
+  };
 
   return (
     <div className="h-full bg-sidebar border-r border-sidebar-border flex flex-col">
