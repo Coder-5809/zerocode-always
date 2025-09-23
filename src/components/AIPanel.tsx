@@ -95,7 +95,7 @@ export default function AIPanel({ onCodeGenerated }: AIPanelProps) {
 
     try {
       // Step 1 → Planning with GPT-5
-      const plan = await callSamuraiAI("Free/Samurai/gpt-4.1", originalInput);
+      const plan = await callSamuraiAI("Free/Samurai/gpt-5", originalInput);
 
       const planningMessage: Message = {
         id: (Date.now() + Math.random()).toString(),
